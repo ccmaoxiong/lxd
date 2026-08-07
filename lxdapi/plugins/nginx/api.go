@@ -1,6 +1,8 @@
 package nginx
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"lxdapi/internal/db"
 	"lxdapi/models"
@@ -24,6 +26,23 @@ func NewAPIHandler(plugin *NginxPlugin) *APIHandler {
 	}
 }
 
+func validateSSL(certStr, keyStr string) error {
+	certBytes := []byte(certStr)
+	keyBytes := []byte(keyStr)
+	tlsCert, err := tls.X509KeyPair(certBytes, keyBytes)
+	if err != nil {
+		return fmt.Errorf("解析失败或不匹配: %w", err)
+	}
+	if len(tlsCert.Certificate) == 0 {
+		return fmt.Errorf("未在输入中找到任何有效的证书数据块")
+	}
+	_, err = x509.ParseCertificate(tlsCert.Certificate[0])
+	if err != nil {
+		return fmt.Errorf("证书数据解析失败: %w", err)
+	}
+	return nil
+}
+
 func validateDomain(domain string) error {
 	domain = strings.TrimSpace(domain)
 
@@ -39,7 +58,7 @@ func validateDomain(domain string) error {
 		return fmt.Errorf("域名不能包含空格")
 	}
 
-	domainRegex := regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)*$`)
+	domainRegex := regexp.MustCompile(`\A(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}\z`)
 	if !domainRegex.MatchString(domain) {
 		return fmt.Errorf("域名格式不正确，只能包含字母、数字、点和中划线，且不能以中划线开头或结尾")
 	}
@@ -259,6 +278,12 @@ func (h *APIHandler) CreateProxy(c *gin.Context) {
 		return
 	}
 
+	if req.SSLCert != "" || req.SSLKey != "" {
+		if err := validateSSL(req.SSLCert, req.SSLKey); err != nil {
+			response.Error(c, 400, err.Error())
+			return
+		}
+	}
 	if err := validateDomain(req.Domain); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -345,6 +370,12 @@ func (h *APIHandler) UpdateProxy(c *gin.Context) {
 		return
 	}
 
+	if req.SSLCert != "" || req.SSLKey != "" {
+		if err := validateSSL(req.SSLCert, req.SSLKey); err != nil {
+			response.Error(c, 400, err.Error())
+			return
+		}
+	}
 	if err := validateDomain(req.Domain); err != nil {
 		response.Error(c, 400, err.Error())
 		return
@@ -600,6 +631,12 @@ func (h *APIHandler) createProxyInternal(c *gin.Context, req models.ReverseProxy
 		return
 	}
 
+	if req.SSLCert != "" || req.SSLKey != "" {
+		if err := validateSSL(req.SSLCert, req.SSLKey); err != nil {
+			response.Error(c, 400, err.Error())
+			return
+		}
+	}
 	if err := validateDomain(req.Domain); err != nil {
 		response.Error(c, 400, err.Error())
 		return
