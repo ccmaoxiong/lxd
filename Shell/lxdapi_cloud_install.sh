@@ -118,13 +118,22 @@ download_release() {
     if [ ! -f "$TEMP_DIR/lxdapi/lxdapi-$ARCH" ] || [ ! -d "$TEMP_DIR/lxdapi/configs" ]; then
         err "发布包内容不完整或架构不匹配"
     fi
+    ok "发布包下载并解压完成"
+}
 
-    if [ ! -f "$TEMP_DIR/lxdapi/install-backend.sh" ]; then
-        err "发布包未包含 install-backend.sh，请重新执行 build.sh 后上传"
+fetch_onekey_installer() {
+    local url
+
+    if [ -n "${LXDAPI_ONEKEY_URL:-}" ]; then
+        url="$LXDAPI_ONEKEY_URL"
+    elif [ "${RELEASE_SOURCE:-github}" = "gitee" ]; then
+        url="https://gitee.com/xkatld/lxdapi-web-server/raw/main-stable/Shell/lxdapi_onekey_install.sh"
+    else
+        url="https://raw.githubusercontent.com/xkatld/lxdapi-web-server/main-stable/Shell/lxdapi_onekey_install.sh"
     fi
 
-    chmod +x "$TEMP_DIR/lxdapi/install-backend.sh"
-    ok "发布包下载并解压完成"
+    info "下载云端安装器: $url"
+    download_file "$TEMP_DIR/lxdapi_onekey_install.sh" "$url"
 }
 
 main() {
@@ -142,7 +151,18 @@ main() {
     export AUTO_INSTALL
 
     info "开始执行云端安装..."
-    if ! bash "$TEMP_DIR/lxdapi/install-backend.sh"; then
+    if [ -f "$TEMP_DIR/lxdapi/install-backend.sh" ]; then
+        INSTALLER="$TEMP_DIR/lxdapi/install-backend.sh"
+    else
+        warn "发布包未包含 install-backend.sh，自动获取云端安装器"
+        fetch_onekey_installer
+        INSTALLER="$TEMP_DIR/lxdapi_onekey_install.sh"
+        LXDAPI_SOURCE_DIR="$TEMP_DIR/lxdapi"
+        export LXDAPI_SOURCE_DIR
+    fi
+
+    chmod +x "$INSTALLER"
+    if ! bash "$INSTALLER"; then
         err "云端安装失败"
     fi
 }

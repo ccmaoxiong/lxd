@@ -103,6 +103,8 @@ cp ../Shell/lxdapi_install_local.sh release/lxdapi-amd64/install.sh
 chmod +x release/lxdapi-amd64/install.sh
 cp ../Shell/lxdapi_onekey_install.sh release/lxdapi-amd64/install-backend.sh
 chmod +x release/lxdapi-amd64/install-backend.sh
+cp ../Shell/lxdapi_cloud_install.sh release/lxdapi-amd64/cloud-install.sh
+chmod +x release/lxdapi-amd64/cloud-install.sh
 
 # 打包 OpenGFW 插件
 mkdir -p release/lxdapi-amd64/plugins/opengfw/bin
@@ -132,6 +134,8 @@ cp ../Shell/lxdapi_install_local.sh release/lxdapi-arm64/install.sh
 chmod +x release/lxdapi-arm64/install.sh
 cp ../Shell/lxdapi_onekey_install.sh release/lxdapi-arm64/install-backend.sh
 chmod +x release/lxdapi-arm64/install-backend.sh
+cp ../Shell/lxdapi_cloud_install.sh release/lxdapi-arm64/cloud-install.sh
+chmod +x release/lxdapi-arm64/cloud-install.sh
 
 # 打包 OpenGFW 插件（仅对应架构）
 mkdir -p release/lxdapi-arm64/plugins/opengfw/bin

@@ -121,6 +121,19 @@ acquire_backend() {
         return
     fi
 
+    if [ -n "${LXDAPI_SOURCE_DIR:-}" ]; then
+        if [ ! -d "$LXDAPI_SOURCE_DIR" ]; then
+            err "LXDAPI_SOURCE_DIR 不存在: $LXDAPI_SOURCE_DIR"
+        fi
+        SOURCE_DIR="$(cd "$LXDAPI_SOURCE_DIR" && pwd)"
+        BINARY="$SOURCE_DIR/lxdapi-$ARCH"
+        if [ ! -f "$BINARY" ] || [ ! -d "$SOURCE_DIR/configs" ]; then
+            err "LXDAPI_SOURCE_DIR 不是有效发布包目录: $LXDAPI_SOURCE_DIR"
+        fi
+        info "使用指定发布包目录: $BINARY"
+        return
+    fi
+
     if [ -f "$SCRIPT_DIR/lxdapi-$ARCH" ] && [ -d "$SCRIPT_DIR/configs" ]; then
         BINARY="$SCRIPT_DIR/lxdapi-$ARCH"
         SOURCE_DIR="$SCRIPT_DIR"
