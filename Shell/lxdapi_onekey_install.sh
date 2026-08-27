@@ -409,7 +409,7 @@ init_lxd_network() {
 
     info "初始化 LXD 网络: $network_name ..."
     "$lxc_bin" config set images.auto_update_interval "0"
-    "$lxc_bin" network create "$network_name" type=bridge \
+    "$lxc_bin" network create "$network_name" --type bridge \
         ipv4.address="$LXD_IPV4_ADDRESS" ipv4.nat="$LXD_IPV4_NAT" \
         ipv6.address="$LXD_IPV6_ADDRESS" ipv6.nat="$LXD_IPV6_NAT"
 
