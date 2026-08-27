@@ -35,6 +35,20 @@ ADMIN_PASS=你的密码 \
 sudo bash Shell/lxdapi_onekey_install.sh
 ```
 
+LXD 网络默认会初始化 `lxdbr0`，网段为 `10.66.0.1/16` + `fd66:6666::1/64`，并开启 IPv4/IPv6 NAT。需要自定义时，在免交互安装前传入环境变量：
+
+```bash
+AUTO_INSTALL=1 \
+LXD_NETWORK_NAME=lxdbr0 \
+LXD_IPV4_ADDRESS=10.66.0.1/16 \
+LXD_IPV4_NAT=true \
+LXD_IPV6_ADDRESS=none \
+LXD_IPV6_NAT=false \
+sudo bash Shell/lxdapi_onekey_install.sh
+```
+
+只禁用 IPv6 时可用 `LXD_IPV6_ADDRESS=none LXD_IPV6_NAT=false`。如果 LXD 的 `lxdbr0` 已经存在，脚本默认不修改现有网络；需要按新参数覆盖更新时追加 `LXD_NETWORK_FORCE=1`。
+
 LXD 已经装好时，可以只安装后端：
 
 ```bash

@@ -9,6 +9,7 @@ INSTALL_DIR="${LXDAPI_INSTALL_DIR:-/opt/lxdapi}"
 FORCE_INSTALL="${FORCE_INSTALL:-0}"
 SKIP_SERVICE="${SKIP_SERVICE:-0}"
 SKIP_LXD="${SKIP_LXD:-0}"
+LXD_NETWORK_FORCE="${LXD_NETWORK_FORCE:-0}"
 AUTO_INSTALL="${AUTO_INSTALL:-0}"
 NGINX_ENABLED="${NGINX_ENABLED:-0}"
 SNAP_CHANNEL="${SNAP_CHANNEL:-latest/stable}"
@@ -307,68 +308,125 @@ install_lxd_backend() {
     ok "LXD 安装完成"
 }
 
+normalize_bool() {
+    case "$1" in
+        1|y|Y|yes|Yes|true|TRUE)
+            echo true
+            ;;
+        *)
+            echo false
+            ;;
+    esac
+}
+
+configure_lxd_network_settings() {
+    if [ "$AUTO_INSTALL" = "1" ]; then
+        LXD_NETWORK_NAME="${LXD_NETWORK_NAME:-lxdbr0}"
+        LXD_IPV4_ADDRESS="${LXD_IPV4_ADDRESS:-10.66.0.1/16}"
+        LXD_IPV4_NAT="$(normalize_bool "${LXD_IPV4_NAT:-true}")"
+        LXD_IPV6_ADDRESS="${LXD_IPV6_ADDRESS:-fd66:6666::1/64}"
+        LXD_IPV6_NAT="$(normalize_bool "${LXD_IPV6_NAT:-true}")"
+    else
+        LXD_NETWORK_NAME="${LXD_NETWORK_NAME:-}"
+        if [ -z "$LXD_NETWORK_NAME" ]; then
+            reading "请输入 LXD 网络名称 [lxdbr0]：" LXD_NETWORK_NAME
+        fi
+        LXD_NETWORK_NAME=${LXD_NETWORK_NAME:-lxdbr0}
+
+        reading "是否启用 IPv4？y/n [y]：" enable_ipv4
+        if [[ ${enable_ipv4:-y} =~ ^[yY]$ ]]; then
+            reading "请输入 IPv4 网段 [10.66.0.1/16]：" ipv4_address
+            LXD_IPV4_ADDRESS=${ipv4_address:-10.66.0.1/16}
+            reading "是否启用 IPv4 NAT？y/n [y]：" ipv4_nat
+            LXD_IPV4_NAT=$(normalize_bool "${ipv4_nat:-y}")
+        else
+            LXD_IPV4_ADDRESS="none"
+            LXD_IPV4_NAT="false"
+        fi
+
+        reading "是否启用 IPv6？y/n [y]：" enable_ipv6
+        if [[ ${enable_ipv6:-y} =~ ^[yY]$ ]]; then
+            reading "请输入 IPv6 网段 [fd66:6666::1/64]：" ipv6_address
+            LXD_IPV6_ADDRESS=${ipv6_address:-fd66:6666::1/64}
+            reading "是否启用 IPv6 NAT？y/n [y]：" ipv6_nat
+            LXD_IPV6_NAT=$(normalize_bool "${ipv6_nat:-y}")
+        else
+            LXD_IPV6_ADDRESS="none"
+            LXD_IPV6_NAT="false"
+        fi
+    fi
+
+    info "LXD 网络配置: $LXD_NETWORK_NAME (IPv4=$LXD_IPV4_ADDRESS, IPv6=$LXD_IPV6_ADDRESS)"
+}
+
 init_lxd_network() {
-    local lxd_bin
+    local lxc_bin
 
     if [ "$SKIP_LXD" = "1" ]; then
         info "已跳过 LXD 安装和初始化"
         return
     fi
 
-    if ! command -v lxc >/dev/null 2>&1; then
+    if command -v lxc >/dev/null 2>&1; then
+        lxc_bin="$(command -v lxc)"
+    elif [ -x /snap/bin/lxc ]; then
+        lxc_bin="/snap/bin/lxc"
+    else
         warn "未找到 lxc 命令，跳过 LXD 网络初始化"
         return
     fi
 
-    if command -v lxd >/dev/null 2>&1; then
-        lxd_bin="$(command -v lxd)"
-    elif [ -x /snap/bin/lxd ]; then
-        lxd_bin="/snap/bin/lxd"
-    else
-        warn "未找到 lxd 命令，跳过 LXD 网络初始化"
-        return
-    fi
+    local network_name="${LXD_NETWORK_NAME:-lxdbr0}"
+    local network_exists=0
 
     for _ in 1 2 3 4 5 6 7 8 9 10; do
-        if "$lxd_bin" network show lxdbr0 >/dev/null 2>&1; then
-            ok "lxdbr0 网络已存在"
-            return
+        if "$lxc_bin" network show "$network_name" >/dev/null 2>&1; then
+            network_exists=1
+            break
         fi
         sleep 1
     done
 
-    info "初始化 LXD 默认网络..."
-    cat <<EOF | "$lxd_bin" init --preseed
-config:
-  images.auto_update_interval: "0"
-networks:
-- config:
-    ipv4.address: 10.66.0.1/16
-    ipv4.nat: "true"
-    ipv6.address: fd66:6666::1/64
-    ipv6.nat: "true"
-  description: ""
-  name: lxdbr0
-  type: bridge
-storage_pools: []
-storage_volumes: []
-profiles:
-- config: {}
-  description: ""
-  devices:
-    eth0:
-      name: eth0
-      network: lxdbr0
-      type: nic
-  name: default
-projects: []
-cluster: null
-EOF
+    if [ "$network_exists" = "1" ]; then
+        if [ "$LXD_NETWORK_FORCE" = "1" ]; then
+            warn "检测到 $network_name，启用强制更新网络配置..."
+            configure_lxd_network_settings
+            "$lxc_bin" config set images.auto_update_interval "0"
+            "$lxc_bin" network set "$network_name" ipv4.address "$LXD_IPV4_ADDRESS"
+            "$lxc_bin" network set "$network_name" ipv4.nat "$LXD_IPV4_NAT"
+            "$lxc_bin" network set "$network_name" ipv6.address "$LXD_IPV6_ADDRESS"
+            "$lxc_bin" network set "$network_name" ipv6.nat "$LXD_IPV6_NAT"
+            ok "$network_name 网络配置已更新"
+        else
+            ok "$network_name 网络已存在"
+            return
+        fi
+        return
+    fi
 
-    if "$lxd_bin" network show lxdbr0 >/dev/null 2>&1; then
-        ok "lxdbr0 网络初始化完成"
+    configure_lxd_network_settings
+    network_name="$LXD_NETWORK_NAME"
+
+    info "初始化 LXD 网络: $network_name ..."
+    "$lxc_bin" config set images.auto_update_interval "0"
+    "$lxc_bin" network create "$network_name" type=bridge \
+        ipv4.address="$LXD_IPV4_ADDRESS" ipv4.nat="$LXD_IPV4_NAT" \
+        ipv6.address="$LXD_IPV6_ADDRESS" ipv6.nat="$LXD_IPV6_NAT"
+
+    if ! "$lxc_bin" profile show default >/dev/null 2>&1; then
+        "$lxc_bin" profile create default >/dev/null
+    fi
+    local default_network
+    default_network="$("$lxc_bin" profile device get default eth0 network 2>/dev/null || true)"
+    if [ "$default_network" != "$network_name" ]; then
+        "$lxc_bin" profile device remove default eth0 >/dev/null 2>&1 || true
+        "$lxc_bin" profile device add default eth0 nic network="$network_name" name=eth0
+    fi
+
+    if "$lxc_bin" network show "$network_name" >/dev/null 2>&1; then
+        ok "$network_name 网络初始化完成"
     else
-        warn "lxdbr0 网络初始化后未检测到，请手动执行 lxd init"
+        warn "$network_name 网络初始化后未检测到，请手动执行 lxd init"
     fi
 }
 
