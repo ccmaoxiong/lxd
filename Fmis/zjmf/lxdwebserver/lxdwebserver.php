@@ -5,9 +5,9 @@ use think\Db;
 function lxdwebserver_MetaData()
 {
     return [
-        'DisplayName' => '魔方财务-LXD用户对接插件 by xkatld',
+        'DisplayName' => '魔方财务-LXD用户对接插件 by ccmaoxiong',
         'APIVersion'  => 'v2.1.0',
-        'HelpDoc'     => 'https://github.com/xkatld/lxdapi-web-server',
+        'HelpDoc'     => 'https://github.com/ccmaoxiong/lxd',
     ];
 }
 

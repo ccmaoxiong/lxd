@@ -4,9 +4,9 @@ use app\common\model\HostModel;
 
 function lxdapiserver_MetaData(){
 	return [
-		'DisplayName' => '魔方财务V10-LXD对接插件 by xkatld',
+		'DisplayName' => '魔方财务V10-LXD对接插件 by ccmaoxiong',
 		'Version' => 'v2.0.3',
-		'HelpDoc' => 'https://github.com/xkatld/lxdapi-web-server',
+		'HelpDoc' => 'https://github.com/ccmaoxiong/lxd',
 	];
 }
 

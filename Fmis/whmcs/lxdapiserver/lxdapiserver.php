@@ -1,11 +1,11 @@
 <?php
 /**
- * WHMCS-LXD对接插件 by xkatld
+ * WHMCS-LXD对接插件 by ccmaoxiong
  *
- * @package    WHMCS-LXD对接插件 by xkatld
- * @author     xkatld
+ * @package    WHMCS-LXD对接插件 by ccmaoxiong
+ * @author     ccmaoxiong
  * @version    v2.0.3
- * @link       https://github.com/xkatld/lxdapi-web-server
+ * @link       https://github.com/ccmaoxiong/lxd
  */
 
 if (!defined("WHMCS")) {
@@ -20,7 +20,7 @@ require_once __DIR__ . '/functions.php';
 function lxdapiserver_MetaData()
 {
     return [
-        'DisplayName' => 'WHMCS-LXD对接插件 by xkatld',
+        'DisplayName' => 'WHMCS-LXD对接插件 by ccmaoxiong',
         'APIVersion' => 'v2.0.3',
         'RequiresServer' => true,
         'DefaultNonSSLPort' => '8443',

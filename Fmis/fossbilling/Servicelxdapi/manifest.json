@@ -1,9 +1,9 @@
 {
   "id": "servicelxdapi",
   "type": "service",
-  "name": "FOSSBilling-LXDAPI对接插件 by xkatld",
+  "name": "FOSSBilling-LXDAPI对接插件 by ccmaoxiong",
   "description": "LXDAPI 容器管理插件",
-  "author": "xkatld",
-  "homepage_url": "https://github.com/xkatld/lxdapi-web-server",
+  "author": "ccmaoxiong",
+  "homepage_url": "https://github.com/ccmaoxiong/lxd",
   "version": "v2.0.3"
 }

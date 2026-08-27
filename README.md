@@ -1,5 +1,9 @@
 # LXD API 服务器及对接插件 lxdapi-web-server
 
+项目主页：https://github.com/ccmaoxiong/lxd
+
+维护者：ccmaoxiong
+
 INUCS闭源 LXC/KVM 项目 https://vpsm91.com 有社区支持版本
 
 本地魔方财务对接说明见 [README-魔方财务.md](README-魔方财务.md)。

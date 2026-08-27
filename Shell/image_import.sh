@@ -42,7 +42,7 @@ detect_arch() {
     ok "系统架构: $ARCH"
 }
 
-IMAGES_BASE_URL="https://github.com/xkatld/lxdapi-web-server/releases/download/image"
+IMAGES_BASE_URL="https://github.com/ccmaoxiong/lxd/releases/download/image"
 
 declare -a IMAGE_LIST=(
     "almalinux-8"
@@ -181,7 +181,7 @@ main_menu() {
         echo
         echo "================================"
         echo "      LXD 镜像管理脚本"
-        echo "    LXDAPI by Github-xkatld"
+        echo "    LXDAPI by Github-ccmaoxiong"
         echo "================================"
         echo "1. 导入镜像"
         echo "2. 查看已有镜像"

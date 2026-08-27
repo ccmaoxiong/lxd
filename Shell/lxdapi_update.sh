@@ -68,11 +68,11 @@ get_latest_version() {
     done
     
     if [[ "$download_source" == "github" ]]; then
-        LATEST_VERSION=$(curl -s https://api.github.com/repos/xkatld/lxdapi-web-server/releases/latest | grep '"tag_name"' | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
-        BASE_URL="https://github.com/xkatld/lxdapi-web-server/releases/download"
+        LATEST_VERSION=$(curl -s https://api.github.com/repos/ccmaoxiong/lxd/releases/latest | grep '"tag_name"' | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+        BASE_URL="https://github.com/ccmaoxiong/lxd/releases/download"
     else
-        LATEST_VERSION=$(curl -s https://gitee.com/api/v5/repos/xkatld/lxdapi-web-server/releases/latest | grep '"tag_name"' | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
-        BASE_URL="https://gitee.com/xkatld/lxdapi-web-server/releases/download"
+        LATEST_VERSION=$(curl -s https://gitee.com/api/v5/repos/ccmaoxiong/lxd/releases/latest | grep '"tag_name"' | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+        BASE_URL="https://gitee.com/ccmaoxiong/lxd/releases/download"
     fi
     
     if [ -z "$LATEST_VERSION" ]; then
@@ -221,7 +221,7 @@ main() {
     echo
     echo "========================================"
     echo "        LXDAPI 更新脚本"
-    echo "        by Github-xkatld"
+    echo "        by Github-ccmaoxiong"
     echo "========================================"
     echo
     

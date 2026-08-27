@@ -17,9 +17,9 @@ function lxdapiuserserver_debug($message, $data = null)
 function lxdapiuserserver_MetaData()
 {
     return [
-        'DisplayName' => '魔方财务-LXDAPI用户销售对接插件 by xkatld',
+        'DisplayName' => '魔方财务-LXDAPI用户销售对接插件 by ccmaoxiong',
         'APIVersion'  => 'v2.1.0',
-        'HelpDoc'     => 'https://github.com/xkatld/lxdapi-web-server',
+        'HelpDoc'     => 'https://github.com/ccmaoxiong/lxd',
     ];
 }
 

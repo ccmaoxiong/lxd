@@ -200,7 +200,7 @@ curl -k https://127.0.0.1:8443/api/system/containers \
 | --- | --- |
 | 名称 | 按需填写 |
 | IP地址 | LXD API 服务器 IP 或域名 |
-| 服务器模块 | `魔方财务-LXD对接插件 by xkatld` |
+| 服务器模块 | `魔方财务-LXD对接插件 by ccmaoxiong` |
 | 端口 | LXD API 服务器端口 |
 | secure | 按服务端 TLS 配置开启或关闭 |
 | Hash | `config.yaml` 中的 `system.security.api_hash` |

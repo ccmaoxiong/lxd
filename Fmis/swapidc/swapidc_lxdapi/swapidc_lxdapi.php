@@ -1,10 +1,10 @@
 <?php
 /**
- * SWAPIDC-LXD对接插件 by xkatld
+ * SWAPIDC-LXD对接插件 by ccmaoxiong
  * 
- * @author xkatld
+ * @author ccmaoxiong
  * @version 2.0.2
- * @link https://github.com/xkatld/lxdapi-web-server
+ * @link https://github.com/ccmaoxiong/lxd
  */
 
 require_once __DIR__ . '/includes/lxd_api.php';

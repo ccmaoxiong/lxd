@@ -238,7 +238,7 @@ main() {
     echo
     echo "========================================"
     echo "        LXD 安装脚本"
-    echo "        by Github-xkatld"
+    echo "        by Github-ccmaoxiong"
     echo "========================================"
     echo
     
