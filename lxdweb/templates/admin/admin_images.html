@@ -58,6 +58,12 @@
             </div>
         </div>
 
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-gray-700">预设镜像</h2>
+            <span class="text-xs text-gray-500">选择常用系统后填入远程导入</span>
+        </div>
+        <div id="presetImages" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 mb-6"></div>
+
         <div id="batchBar" class="bg-red-50 rounded-lg border border-red-200 p-3 mb-4" style="display: none;">
             <div class="flex items-center justify-between">
                 <span class="text-sm font-medium text-red-900">已选择 <span id="selectedCount">0</span> 个镜像</span>
@@ -150,7 +156,51 @@
         let imagesData = [];
         let currentFingerprint = '';
 
+        const presetImages = [
+            { name: 'Ubuntu 24.04', source: 'images:ubuntu/24.04', alias: 'ubuntu-24.04' },
+            { name: 'Ubuntu 22.04', source: 'images:ubuntu/22.04', alias: 'ubuntu-22.04' },
+            { name: 'Ubuntu 20.04', source: 'images:ubuntu/20.04', alias: 'ubuntu-20.04' },
+            { name: 'Debian 12', source: 'images:debian/12', alias: 'debian-12' },
+            { name: 'Debian 11', source: 'images:debian/11', alias: 'debian-11' },
+            { name: 'Alpine 3.20', source: 'images:alpine/3.20', alias: 'alpine-3.20' },
+            { name: 'Alpine 3.19', source: 'images:alpine/3.19', alias: 'alpine-3.19' },
+            { name: 'Rocky Linux 9', source: 'images:rockylinux/9', alias: 'rockylinux-9' },
+            { name: 'AlmaLinux 9', source: 'images:almalinux/9', alias: 'almalinux-9' },
+            { name: 'Fedora 40', source: 'images:fedora/40', alias: 'fedora-40' },
+            { name: 'OpenSUSE Leap 15.5', source: 'images:opensuse/15.5', alias: 'opensuse-15.5' },
+            { name: 'Oracle Linux 9', source: 'images:oraclelinux/9', alias: 'oraclelinux-9' },
+            { name: 'OpenWrt 23.05', source: 'images:openwrt/23.05', alias: 'openwrt-23.05' },
+            { name: 'Arch Linux', source: 'images:archlinux/current', alias: 'archlinux-current' }
+        ];
+
+        function renderPresetImages() {
+            const html = presetImages.map(function(p) {
+                return `
+                    <div class="content-box rounded-lg border border-gray-200 p-3 flex flex-col justify-between gap-2 shadow-sm" style="min-height:120px">
+                        <div>
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-sm font-semibold text-gray-800">${p.name}</span>
+                                <span class="iconify text-gray-400" data-icon="mdi:linux" data-width="18"></span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1 break-all">${p.source}</p>
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="openPresetImport('${p.source}', '${p.alias}')" class="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition">填入导入</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            $('#presetImages').html(html);
+        }
+
+        function openPresetImport(source, alias) {
+            openImportModal();
+            $('#importSource').val(source);
+            $('#importAlias').val(alias);
+        }
+
         $(document).ready(function() {
+            renderPresetImages();
             loadImages();
         });
 
