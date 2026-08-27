@@ -15,10 +15,10 @@ NGINX_ENABLED="${NGINX_ENABLED:-0}"
 SNAP_CHANNEL="${SNAP_CHANNEL:-latest/stable}"
 SNAPD_CHANNEL="${SNAPD_CHANNEL:-latest/stable}"
 GITHUB_OWNER="${GITHUB_OWNER:-ccmaoxiong}"
-GITHUB_REPO="${GITHUB_REPO:-lxdapi-web-server}"
-GITHUB_BRANCH="${GITHUB_BRANCH:-main-stable}"
+GITHUB_REPO="${GITHUB_REPO:-lxc}"
+GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 GITEE_OWNER="${GITEE_OWNER:-ccmaoxiong}"
-GITEE_REPO="${GITEE_REPO:-lxdapi-web-server}"
+GITEE_REPO="${GITEE_REPO:-lxc}"
 
 if [ "$AUTO_INSTALL" = "0" ] && [ ! -t 0 ]; then
     AUTO_INSTALL=1
