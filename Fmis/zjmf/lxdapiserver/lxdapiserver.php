@@ -181,24 +181,66 @@ function lxdapiserver_ParseMemory($str)
 
 function lxdapiserver_ParseBandwidth($str)
 {
-    $str = trim($str);
+    $str = trim(strtolower($str));
     if (empty($str)) return 0;
-    
-    if (stripos($str, 'Gbit') !== false) {
-        return intval($str) * 1000;
-    } elseif (stripos($str, 'Mbit') !== false) {
-        return intval($str);
-    } else {
-        return intval($str);
+
+    if (preg_match('/^([\d.]+)\s*(?:gbit|gbps|g)$/', $str, $m)) {
+        return (int) round(floatval($m[1]) * 1000);
     }
+    if (preg_match('/^([\d.]+)\s*(?:mbit|mbps|m)$/', $str, $m)) {
+        return (int) round(floatval($m[1]));
+    }
+
+    return intval($str);
 }
+
+function lxdapiserver_ParseTraffic($str)
+{
+    $str = trim(strtolower($str));
+    if (empty($str)) return 0;
+
+    if (preg_match('/^([\d.]+)\s*(?:tb|t)$/', $str, $m)) {
+        return (int) round(floatval($m[1]) * 1024);
+    }
+    if (preg_match('/^([\d.]+)\s*(?:gb|g)$/', $str, $m)) {
+        return (int) round(floatval($m[1]));
+    }
+
+    return intval($str);
+}
+
+function lxdapiserver_UseHTTPS($params)
+{
+    $secure = $params['secure'] ?? $params['ssl'] ?? true;
+    if (is_string($secure)) {
+        $secure = strtolower(trim($secure));
+    }
+
+    return filter_var($secure, FILTER_VALIDATE_BOOLEAN);
+}
+
+function lxdapiserver_HostForURL($params)
+{
+    $host = (string)($params['server_ip'] ?? '');
+    if (strpos($host, ':') !== false && strpos($host, '[') !== 0) {
+        $host = '[' . trim($host, '[]') . ']';
+    }
+
+    return $host;
+}
+
+function lxdapiserver_BaseUrl($params)
+{
+    $protocol = lxdapiserver_UseHTTPS($params) ? 'https' : 'http';
+    return $protocol . '://' . lxdapiserver_HostForURL($params) . ':' . $params['port'];
+}
+
 
 function lxdapiserver_ApiRequest($params, $endpoint, $data = [], $method = 'POST')
 {
     $curl = curl_init();
     
-    $protocol = 'https';
-    $url = $protocol . '://' . $params['server_ip'] . ':' . $params['port'] . $endpoint;
+    $url = lxdapiserver_BaseUrl($params) . $endpoint;
     
     lxdapiserver_debug('API请求', [
         'url' => $url,
@@ -308,11 +350,11 @@ function lxdapiserver_CreateAccount($params)
         'username' => 'user_' . $params['userid'],
         'password' => $params['password'],
         'cpu' => (int)($configoptions['cpus'] ?? 1),
-        'memory' => (int)($configoptions['memory'] ?? 512),
-        'disk' => (int)($configoptions['disk'] ?? 1024),
-        'ingress' => (int)($configoptions['ingress'] ?? 100),
-        'egress' => (int)($configoptions['egress'] ?? 100),
-        'traffic_limit' => (int)($configoptions['traffic_limit'] ?? 100),
+        'memory' => lxdapiserver_ParseMemory($configoptions['memory'] ?? 512),
+        'disk' => lxdapiserver_ParseMemory($configoptions['disk'] ?? 1024),
+        'ingress' => lxdapiserver_ParseBandwidth($configoptions['ingress'] ?? 100),
+        'egress' => lxdapiserver_ParseBandwidth($configoptions['egress'] ?? 100),
+        'traffic_limit' => lxdapiserver_ParseTraffic($configoptions['traffic_limit'] ?? 100),
         'allow_nesting' => ($configoptions['allow_nesting'] ?? 'true') === 'true',
         'memory_swap' => ($configoptions['memory_swap'] ?? 'true') === 'true',
         'privileged' => ($configoptions['privileged'] ?? 'false') === 'true',
@@ -648,7 +690,7 @@ function lxdapiserver_vnc($params)
     }
     
     if (isset($res['code']) && $res['code'] == 200 && isset($res['data']['token'])) {
-        $consoleUrl = 'https://' . $params['server_ip'] . ':' . $params['port'] . '/console?token=' . $res['data']['token'];
+        $consoleUrl = lxdapiserver_BaseUrl($params) . '/console?token=' . rawurlencode($res['data']['token']);
         
         return [
             'status' => 'success',
@@ -683,8 +725,7 @@ function lxdapiserver_ClientAreaOutput($params, $key)
         
         if (isset($res['code']) && $res['code'] == 200 && isset($res['data'])) {
             $accessCode = $res['data']['access_code'] ?? '';
-            $protocol = 'https';
-            $baseUrl = $protocol . '://' . $params['server_ip'] . ':' . $params['port'];
+            $baseUrl = lxdapiserver_BaseUrl($params);
             $jumpUrl = $baseUrl . '/container/dashboard?hash=' . $accessCode;
             $iframeUrl = $baseUrl . '/container/dashboard/base?hash=' . $accessCode;
         } else {
@@ -718,11 +759,11 @@ function lxdapiserver_ChangePackage($params)
     
     $requestData = [
         'cpu'                => (int)($configoptions['cpus'] ?? 0) ?: null,
-        'memory'             => (int)($configoptions['memory'] ?? 0) ?: null,
-        'disk'               => (int)($configoptions['disk'] ?? 0) ?: null,
-        'ingress'            => (int)($configoptions['ingress'] ?? 0) ?: null,
-        'egress'             => (int)($configoptions['egress'] ?? 0) ?: null,
-        'traffic_limit'      => (int)($configoptions['traffic_limit'] ?? 0) ?: null,
+        'memory'             => lxdapiserver_ParseMemory($configoptions['memory'] ?? 0) ?: null,
+        'disk'               => lxdapiserver_ParseMemory($configoptions['disk'] ?? 0) ?: null,
+        'ingress'            => lxdapiserver_ParseBandwidth($configoptions['ingress'] ?? 0) ?: null,
+        'egress'             => lxdapiserver_ParseBandwidth($configoptions['egress'] ?? 0) ?: null,
+        'traffic_limit'      => lxdapiserver_ParseTraffic($configoptions['traffic_limit'] ?? 0) ?: null,
         'cpu_allowance'      => (int)($configoptions['cpu_allowance'] ?? 0) ?: null,
         'io_read'            => (int)($configoptions['io_read'] ?? 0) ?: null,
         'io_write'           => (int)($configoptions['io_write'] ?? 0) ?: null,

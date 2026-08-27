@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /root >/dev/null 2>&1
+cd /root >/dev/null 2>&1 || true
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -40,6 +40,8 @@ err() { log "${RED}[ERR]${NC} $1"; exit 1; }
 
 reading() { read -rp "$(echo -e "${GREEN}$1${NC}")" "$2"; }
 
+SNAPD_CHANNEL="${SNAPD_CHANNEL:-latest/stable}"
+
 install_package() {
     package_name=$1
     if dpkg -l 2>/dev/null | grep -q "^ii.*$package_name"; then
@@ -63,21 +65,79 @@ get_available_space() {
     echo "$available_space"
 }
 
+snapd_version() {
+    snap version 2>/dev/null | awk '$1 == "snapd" {print $2; exit}'
+}
+
+version_at_least() {
+    local left="$1"
+    local right="$2"
+    [ "$(printf '%s\n%s\n' "$left" "$right" | sort -V | head -n 1)" = "$right" ]
+}
+
+ensure_snapd_current() {
+    local current
+    current="$(snapd_version)"
+    if [ -n "$current" ] && version_at_least "$current" "2.75"; then
+        ok "snapd 版本满足要求: $current"
+        return
+    fi
+
+    info "当前 snapd: ${current:-未知}，需要 2.75+，开始刷新 snapd..."
+    for _ in 1 2 3 4 5 6 7 8 9 10; do
+        current="$(snapd_version)"
+        if [ -z "$current" ] || ! version_at_least "$current" "2.75"; then
+            snap refresh snapd --channel="$SNAPD_CHANNEL" >/dev/null 2>&1 || snap install snapd --channel="$SNAPD_CHANNEL" >/dev/null 2>&1 || true
+            sleep 5
+        fi
+        current="$(snapd_version)"
+        if [ -n "$current" ] && version_at_least "$current" "2.75"; then
+            ok "snapd 已更新到 $current"
+            systemctl restart snapd >/dev/null 2>&1 || true
+            sleep 2
+            return
+        fi
+    done
+
+    warn "未能确认 snapd 已更新到 2.75+，继续尝试安装 LXD"
+}
+
 install_lxd() {
     apt-get update >/dev/null 2>&1
     info "正在安装 snapd 服务..."
     apt-get install -y snapd
     
-    info "正在升级 snapd 自身组件..."
-    snap install snapd 2>/dev/null || snap install snapd
-    
-    info "正在检查并就绪 snap core 组件..."
-    if ! snap list core >/dev/null 2>&1; then
-        snap install core 2>/dev/null || snap install core
+    systemctl enable --now snapd >/dev/null 2>&1 || true
+    snap wait system seed.loaded 2>/dev/null || true
+
+    if [ -n "${SNAP_PROXY_HTTP:-}" ]; then
+        snap set system proxy.http="$SNAP_PROXY_HTTP" 2>/dev/null || true
     fi
-    
-    info "开始安装 LXD..."
-    snap install lxd --channel=latest/stable 2>/dev/null || snap install lxd --channel=latest/stable
+    if [ -n "${SNAP_PROXY_HTTPS:-}" ]; then
+        snap set system proxy.https="$SNAP_PROXY_HTTPS" 2>/dev/null || true
+    fi
+    if [ -n "${SNAP_PROXY_HTTP:-}" ] || [ -n "${SNAP_PROXY_HTTPS:-}" ]; then
+        systemctl restart snapd >/dev/null 2>&1 || true
+    fi
+
+    ensure_snapd_current
+
+    channel="${SNAP_CHANNEL:-latest/stable}"
+    info "开始安装 LXD ($channel)..."
+    local install_ok=0
+    for attempt in 1 2 3; do
+        info "第 $attempt/3 次尝试..."
+        if snap install lxd --channel="$channel"; then
+            install_ok=1
+            break
+        fi
+        warn "snap 请求失败，10 秒后重试..."
+        sleep 10
+        systemctl restart snapd >/dev/null 2>&1 || true
+    done
+    if [ "$install_ok" != "1" ]; then
+        err "LXD snap 安装失败，请检查网络或代理后重试"
+    fi
     
     snap alias lxd.lxc lxc 2>/dev/null
     snap alias lxd.lxd lxd 2>/dev/null

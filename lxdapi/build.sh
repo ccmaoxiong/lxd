@@ -4,10 +4,37 @@ set -e
 
 echo "开始编译 lxdapi..."
 
-if ! command -v go &> /dev/null; then
-    echo "错误: 未找到 Go 编译器"
-    exit 1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+if [ -n "${GO_INSTALL_DIR:-}" ]; then
+    export PATH="$GO_INSTALL_DIR/bin:$PATH"
 fi
+export PATH="/usr/local/go/bin:$HOME/.local/go/bin:$PATH"
+
+ensure_go() {
+    if command -v go >/dev/null 2>&1 && go version 2>/dev/null | grep -Eq '^go version go1\.(2[3-9]|[3-9][0-9])(\.| )'; then
+        return 0
+    fi
+
+    if command -v go >/dev/null 2>&1; then
+        echo "当前 Go 版本过低，准备自动安装 Go 1.24.10..."
+    else
+        echo "未找到 Go 编译器，准备自动安装 Go 1.24.10..."
+    fi
+
+    if ! bash "$SCRIPT_DIR/../Shell/go_install.sh"; then
+        echo "错误: Go 自动安装失败"
+        echo "可手动安装后重试，或用 GO_INSTALL_DIR 指定安装目录"
+        exit 1
+    fi
+
+    if ! command -v go >/dev/null 2>&1; then
+        echo "错误: 安装完成但仍未找到 Go 编译器"
+        exit 1
+    fi
+}
+
+ensure_go
 
 echo "Go 版本: $(go version)"
 
@@ -72,6 +99,10 @@ echo "打包 amd64 版本..."
 mkdir -p release/lxdapi-amd64
 cp lxdapi-amd64 release/lxdapi-amd64/
 cp -r configs release/lxdapi-amd64/
+cp ../Shell/lxdapi_install_local.sh release/lxdapi-amd64/install.sh
+chmod +x release/lxdapi-amd64/install.sh
+cp ../Shell/lxdapi_onekey_install.sh release/lxdapi-amd64/install-backend.sh
+chmod +x release/lxdapi-amd64/install-backend.sh
 
 # 打包 OpenGFW 插件
 mkdir -p release/lxdapi-amd64/plugins/opengfw/bin
@@ -97,6 +128,10 @@ echo "打包 arm64 版本..."
 mkdir -p release/lxdapi-arm64
 cp lxdapi-arm64 release/lxdapi-arm64/
 cp -r configs release/lxdapi-arm64/
+cp ../Shell/lxdapi_install_local.sh release/lxdapi-arm64/install.sh
+chmod +x release/lxdapi-arm64/install.sh
+cp ../Shell/lxdapi_onekey_install.sh release/lxdapi-arm64/install-backend.sh
+chmod +x release/lxdapi-arm64/install-backend.sh
 
 # 打包 OpenGFW 插件（仅对应架构）
 mkdir -p release/lxdapi-arm64/plugins/opengfw/bin

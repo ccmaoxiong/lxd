@@ -12,6 +12,8 @@ INUCS闭源 LXC/KVM 项目 https://vpsm91.com 有社区支持版本
 
 详细的安装和使用文档，请参考 [项目 Wiki](https://github.com/xkatld/lxdapi-web-server/wiki)。
 
+本地魔方财务对接说明见 [README-魔方财务.md](README-魔方财务.md)。
+
 ## 赞助与捐赠
 
 如果您觉得本项目对您有所帮助，欢迎点击以下链接进行捐赠支持：
