@@ -1,5 +1,7 @@
 # LXD API 服务器及对接插件 lxdapi-web-server
 
+声明：本项目是基于 [xkatld](https://github.com/ccmaoxiong/lxd/commits?author=xkatld) 的 [lxdapi-web-server](https://github.com/xkatld/lxdapi-web-server) 项目二次修改的。
+
 项目主页：https://github.com/ccmaoxiong/lxd
 
 维护者：ccmaoxiong
