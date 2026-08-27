@@ -13,6 +13,11 @@ AUTO_INSTALL="${AUTO_INSTALL:-0}"
 NGINX_ENABLED="${NGINX_ENABLED:-0}"
 SNAP_CHANNEL="${SNAP_CHANNEL:-latest/stable}"
 SNAPD_CHANNEL="${SNAPD_CHANNEL:-latest/stable}"
+GITHUB_OWNER="${GITHUB_OWNER:-ccmaoxiong}"
+GITHUB_REPO="${GITHUB_REPO:-lxdapi-web-server}"
+GITHUB_BRANCH="${GITHUB_BRANCH:-main-stable}"
+GITEE_OWNER="${GITEE_OWNER:-ccmaoxiong}"
+GITEE_REPO="${GITEE_REPO:-lxdapi-web-server}"
 
 if [ "$AUTO_INSTALL" = "0" ] && [ ! -t 0 ]; then
     AUTO_INSTALL=1
@@ -173,12 +178,12 @@ download_from_release() {
         tag="${LXDAPI_TAG:-}"
         if [ -z "$tag" ]; then
             info "获取最新版本号..."
-            tag="$(curl -fsSL --connect-timeout 20 "https://api.github.com/repos/xkatld/lxdapi-web-server/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"
+            tag="$(curl -fsSL --connect-timeout 20 "https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')"
         fi
         if [ -z "$tag" ]; then
             err "无法获取最新版本，请设置 LXDAPI_RELEASE_URL 或 LXDAPI_TAG"
         fi
-        url="https://github.com/xkatld/lxdapi-web-server/releases/download/${tag}/${archive}"
+        url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tag}/${archive}"
     fi
 
     info "下载地址: $url"

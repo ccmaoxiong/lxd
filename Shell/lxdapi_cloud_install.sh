@@ -14,6 +14,12 @@ info() { log "${BLUE}[INFO]${NC} $1"; }
 warn() { log "${YELLOW}[WARN]${NC} $1"; }
 err() { log "${RED}[ERR]${NC} $1"; exit 1; }
 
+GITHUB_OWNER="${GITHUB_OWNER:-ccmaoxiong}"
+GITHUB_REPO="${GITHUB_REPO:-lxdapi-web-server}"
+GITHUB_BRANCH="${GITHUB_BRANCH:-main-stable}"
+GITEE_OWNER="${GITEE_OWNER:-ccmaoxiong}"
+GITEE_REPO="${GITEE_REPO:-lxdapi-web-server}"
+
 if [ "$(id -u)" -ne 0 ]; then
     err "请使用 root 运行，或使用 sudo bash $0"
 fi
@@ -71,12 +77,12 @@ resolve_release_url() {
 
     case "${RELEASE_SOURCE:-github}" in
         github)
-            api_url="https://api.github.com/repos/xkatld/lxdapi-web-server/releases/latest"
-            base_url="https://github.com/xkatld/lxdapi-web-server/releases/download"
+            api_url="https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest"
+            base_url="https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download"
             ;;
         gitee)
-            api_url="https://gitee.com/api/v5/repos/xkatld/lxdapi-web-server/releases/latest"
-            base_url="https://gitee.com/xkatld/lxdapi-web-server/releases/download"
+            api_url="https://gitee.com/api/v5/repos/${GITEE_OWNER}/${GITEE_REPO}/releases/latest"
+            base_url="https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/releases/download"
             ;;
         *)
             err "RELEASE_SOURCE 仅支持 github 或 gitee"
@@ -127,9 +133,9 @@ fetch_onekey_installer() {
     if [ -n "${LXDAPI_ONEKEY_URL:-}" ]; then
         url="$LXDAPI_ONEKEY_URL"
     elif [ "${RELEASE_SOURCE:-github}" = "gitee" ]; then
-        url="https://gitee.com/xkatld/lxdapi-web-server/raw/main-stable/Shell/lxdapi_onekey_install.sh"
+        url="https://gitee.com/${GITEE_OWNER}/${GITEE_REPO}/raw/${GITHUB_BRANCH}/Shell/lxdapi_onekey_install.sh"
     else
-        url="https://raw.githubusercontent.com/xkatld/lxdapi-web-server/main-stable/Shell/lxdapi_onekey_install.sh"
+        url="https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/${GITHUB_BRANCH}/Shell/lxdapi_onekey_install.sh"
     fi
 
     info "下载云端安装器: $url"
