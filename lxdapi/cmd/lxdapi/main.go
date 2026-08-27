@@ -311,10 +311,10 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		sysInfo := sysinfo.GetSystemInfo()
 		response.Success(c, gin.H{
-			"author":       "xkatld",
-			"project":      "https://github.com/xkatld/lxdapi-web-server",
+			"author":       "ccmaoxiong",
+			"project":      "https://github.com/ccmaoxiong/lxd",
 			"description":  "主流财务系统对接支持，提供完整的Web管理界面与RESTful API",
-			"version":      "v2.1.3",
+			"version":      "v2.1.5",
 			"name":         sysInfo.Name,
 			"docs":         sysInfo.Docs,
 			"os":           sysInfo.OS,
