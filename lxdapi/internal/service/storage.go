@@ -89,6 +89,28 @@ func (s *StorageService) SetPriority(name string, priority int) error {
 	return db.DB.Model(&models.StoragePool{}).Where("name = ?", name).Update("priority", priority).Error
 }
 
+func (s *StorageService) Create(ctx context.Context, name, driver, source, size string, config map[string]string) error {
+	if err := s.lxcClient.CreateStoragePool(ctx, name, driver, source, size, config); err != nil {
+		return err
+	}
+
+	if _, _, _, err := s.SyncFromLXD(ctx); err != nil {
+		logger.Warn("创建存储池后同步失败: %v", err)
+	}
+	return nil
+}
+
+func (s *StorageService) Delete(ctx context.Context, name string) error {
+	if err := s.lxcClient.DeleteStoragePool(ctx, name); err != nil {
+		return err
+	}
+
+	if err := db.DB.Unscoped().Where("name = ?", name).Delete(&models.StoragePool{}).Error; err != nil {
+		logger.Warn("删除存储池数据库记录失败 %s: %v", name, err)
+	}
+	return nil
+}
+
 func (s *StorageService) GetDefault() string {
 	ctx := context.Background()
 	var pools []models.StoragePool

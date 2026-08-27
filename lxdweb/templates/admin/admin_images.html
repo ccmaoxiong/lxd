@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .title }}</title>
+    {{if .FaviconUrl}}<link rel="icon" href="{{.FaviconUrl}}">{{end}}
+    {{if .UseLocalCDN}}
+    <link href="/static/css/daisyui.min.css" rel="stylesheet">
+    <script src="/static/js/tailwindcss.js"></script>
+    <script src="/static/js/jquery.min.js"></script>
+    {{else}}
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    {{end}}
+    <style>
+        :root {
+            --content-opacity: {{if .ContentOpacity}}{{.ContentOpacity}}{{else}}85{{end}};
+        }
+        .content-box {
+            background-color: rgba(255, 255, 255, calc(var(--content-opacity) / 100)) !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    {{template "admin/admin_header.html" .}}
+
+    <div class="flex-1 relative" style="{{if .BgImage}}background-image: url('{{.BgImage}}'); background-size: cover; background-position: center; background-attachment: fixed;{{else}}background-color: #f9fafb;{{end}}">
+        {{if .BgImage}}<div class="absolute inset-0 bg-white pointer-events-none" style="opacity: {{.BgOpacity}}%;"></div>{{end}}
+        <div class="relative container mx-auto px-4 py-8 pb-12">
+
+        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
+            <div class="px-4 py-3 rounded-lg shadow-sm" style="background-color: rgba(255, 255, 255, 0.85);">
+                <h1 class="text-2xl lg:text-3xl font-bold text-gray-800 flex items-center gap-3">
+                    <span class="iconify text-blue-600" data-icon="mdi:image" data-width="28"></span>
+                    镜像管理
+                </h1>
+                <p class="text-sm lg:text-base text-gray-600 mt-1">导入、上传、别名和删除LXD系统镜像</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="openImportModal()" class="px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition flex items-center gap-2">
+                    <span class="iconify" data-icon="mdi:download-outline" data-width="16"></span>
+                    远程导入
+                </button>
+                <button onclick="openUploadModal()" class="px-3 py-2 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition flex items-center gap-2">
+                    <span class="iconify" data-icon="mdi:cloud-upload-outline" data-width="16"></span>
+                    上传文件
+                </button>
+                <button onclick="syncImages()" class="px-3 py-2 text-xs font-medium text-gray-700 content-box hover:bg-gray-50 border border-gray-200 rounded-lg transition flex items-center gap-2">
+                    <span class="iconify" data-icon="mdi:sync" data-width="16"></span>
+                    同步
+                </button>
+                <button onclick="loadImages()" class="px-3 py-2 text-xs font-medium text-gray-700 content-box hover:bg-gray-50 border border-gray-200 rounded-lg transition flex items-center gap-1.5">
+                    <span class="iconify" data-icon="mdi:refresh" data-width="16"></span>
+                    刷新
+                </button>
+            </div>
+        </div>
+
+        <div id="batchBar" class="bg-red-50 rounded-lg border border-red-200 p-3 mb-4" style="display: none;">
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-red-900">已选择 <span id="selectedCount">0</span> 个镜像</span>
+                <button onclick="batchDelete()" class="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 border border-red-300 rounded transition">批量删除</button>
+            </div>
+        </div>
+
+        <div id="imagesContent">
+            <p class="text-center py-8 text-gray-500">加载中...</p>
+        </div>
+
+        </div>
+    </div>
+
+    <div id="importModal" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background-color: rgba(0,0,0,0.5);">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">远程导入镜像</h3>
+                <button onclick="closeModal('importModal')" class="text-gray-400 hover:text-gray-600">
+                    <span class="iconify" data-icon="mdi:close" data-width="20"></span>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">镜像源</label>
+                    <input type="text" id="importSource" class="input input-bordered w-full" placeholder="例如: ubuntu:24.04 或 debian:12">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">本地别名</label>
+                    <input type="text" id="importAlias" class="input input-bordered w-full" placeholder="可选，例如 ubuntu-24.04">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 p-4 border-t bg-gray-50 rounded-b-lg">
+                <button onclick="closeModal('importModal')" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg">取消</button>
+                <button onclick="importRemote()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">开始导入</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="uploadModal" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background-color: rgba(0,0,0,0.5);">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">上传镜像文件</h3>
+                <button onclick="closeModal('uploadModal')" class="text-gray-400 hover:text-gray-600">
+                    <span class="iconify" data-icon="mdi:close" data-width="20"></span>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">镜像压缩包</label>
+                    <input type="file" id="imageFile" class="file-input file-input-bordered w-full" accept=".tar,.gz,.xz,.qcow2,.squashfs">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">镜像别名</label>
+                    <input type="text" id="uploadAlias" class="input input-bordered w-full" placeholder="可选，例如 custom-ubuntu">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 p-4 border-t bg-gray-50 rounded-b-lg">
+                <button onclick="closeModal('uploadModal')" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg">取消</button>
+                <button onclick="uploadImage()" class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg">上传</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="aliasModal" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background-color: rgba(0,0,0,0.5);">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-800">添加镜像别名</h3>
+                <button onclick="closeModal('aliasModal')" class="text-gray-400 hover:text-gray-600">
+                    <span class="iconify" data-icon="mdi:close" data-width="20"></span>
+                </button>
+            </div>
+            <div class="p-4 space-y-4">
+                <p class="text-xs text-gray-500">镜像指纹：<code id="aliasFingerprint" class="font-mono"></code></p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">新别名</label>
+                    <input type="text" id="newAlias" class="input input-bordered w-full" placeholder="例如 ubuntu-24.04">
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 p-4 border-t bg-gray-50 rounded-b-lg">
+                <button onclick="closeModal('aliasModal')" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg">取消</button>
+                <button onclick="saveAlias()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">保存</button>
+            </div>
+        </div>
+    </div>
+
+    {{template "admin/admin_footer.html" .}}
+
+    <script>
+        let imagesData = [];
+        let currentFingerprint = '';
+
+        $(document).ready(function() {
+            loadImages();
+        });
+
+        function loadImages() {
+            $('#imagesContent').html('<p class="text-center py-8"><span class="loading loading-spinner loading-md"></span></p>');
+
+            $.ajax({
+                url: '/api/admin/images',
+                type: 'GET',
+                success: function(result) {
+                    if (result.code === 200) {
+                        imagesData = result.data.images || [];
+                        renderImages();
+                    } else {
+                        $('#imagesContent').html('<p class="text-center py-8 text-error">加载失败: ' + (result.msg || '未知错误') + '</p>');
+                    }
+                },
+                error: function(xhr) {
+                    $('#imagesContent').html('<p class="text-center py-8 text-error">加载失败</p>');
+                }
+            });
+        }
+
+        function renderImages() {
+            if (imagesData.length === 0) {
+                $('#imagesContent').html('<p class="text-center py-8 text-gray-500">暂无镜像，请先同步或导入</p>');
+                return;
+            }
+
+            let html = `
+                <div class="content-box rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="table table-xs">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="w-10"><input type="checkbox" id="selectAll" onchange="toggleAll()" class="checkbox checkbox-xs"></th>
+                                    <th class="text-xs text-gray-600">别名</th>
+                                    <th class="text-xs text-gray-600">系统</th>
+                                    <th class="text-xs text-gray-600">架构</th>
+                                    <th class="text-xs text-gray-600">指纹</th>
+                                    <th class="text-xs text-gray-600">大小</th>
+                                    <th class="text-xs text-gray-600">状态</th>
+                                    <th class="text-xs text-gray-600">上传时间</th>
+                                    <th class="text-xs text-gray-600">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+
+            imagesData.forEach(img => {
+                const aliases = (img.aliases || []).map(a => `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 mr-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full text-xs">
+                        ${a.name}
+                        <button onclick="deleteAlias('${a.name.replace(/'/g, "\\'")}')" class="text-red-500 hover:text-red-700">&times;</button>
+                    </span>
+                `).join('') || '<span class="text-xs text-gray-400">无别名</span>';
+
+                const status = [
+                    img.public ? '<span class="px-2 py-0.5 text-xs font-medium text-green-700 bg-green-100 rounded-full">公开</span>' : '<span class="px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-full">私有</span>',
+                    img.auto_update ? '<span class="px-2 py-0.5 text-xs font-medium text-blue-700 bg-blue-100 rounded-full ml-1">自动更新</span>' : ''
+                ].join('');
+
+                html += `
+                    <tr class="hover">
+                        <td><input type="checkbox" class="checkbox checkbox-xs image-checkbox" data-fingerprint="${img.fingerprint}" onchange="updateSelected()"></td>
+                        <td><div class="max-w-xs">${aliases}</div></td>
+                        <td class="text-xs text-gray-700">${img.os || '-'} ${img.release ? img.release : ''}</td>
+                        <td><span class="px-2 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded">${img.architecture}</span></td>
+                        <td><code class="text-xs font-mono text-gray-600">${img.fingerprint.substring(0, 12)}...</code></td>
+                        <td class="text-xs text-gray-700">${img.size_human}</td>
+                        <td>${status}</td>
+                        <td class="text-xs text-gray-500">${img.uploaded_at || '-'}</td>
+                        <td>
+                            <div class="flex gap-1">
+                                <button onclick="openAliasModal('${img.fingerprint}')" class="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition">别名</button>
+                                <button onclick="deleteImage('${img.fingerprint}')" class="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition">删除</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table></div></div>';
+            $('#imagesContent').html(html);
+        }
+
+        function toggleAll() {
+            const checked = $('#selectAll').is(':checked');
+            $('.image-checkbox').prop('checked', checked);
+            updateSelected();
+        }
+
+        function updateSelected() {
+            const count = $('.image-checkbox:checked').length;
+            $('#selectedCount').text(count);
+            $('#batchBar').toggle(count > 0);
+        }
+
+        function openModal(id) { $('#' + id).removeClass('hidden'); }
+        function closeModal(id) { $('#' + id).addClass('hidden'); }
+
+        function openImportModal() {
+            $('#importSource').val('');
+            $('#importAlias').val('');
+            openModal('importModal');
+        }
+
+        function importRemote() {
+            const source = $('#importSource').val().trim();
+            const alias = $('#importAlias').val().trim();
+            if (!source) {
+                showToast('error', '请填写镜像源');
+                return;
+            }
+
+            $.ajax({
+                url: '/api/admin/images/import',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ source: source, alias: alias }),
+                success: function(result) {
+                    if (result.code === 200) {
+                        showToast('success', '镜像导入成功');
+                        closeModal('importModal');
+                        setTimeout(() => loadImages(), 800);
+                    } else {
+                        showToast('error', result.msg || '导入失败');
+                    }
+                },
+                error: function(xhr) {
+                    showToast('error', (xhr.responseJSON && xhr.responseJSON.msg) || '导入失败');
+                }
+            });
+        }
+
+        function openUploadModal() {
+            $('#imageFile').val('');
+            $('#uploadAlias').val('');
+            openModal('uploadModal');
+        }
+
+        function uploadImage() {
+            const file = $('#imageFile')[0].files[0];
+            if (!file) {
+                showToast('error', '请选择镜像文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('alias', $('#uploadAlias').val().trim());
+
+            $.ajax({
+                url: '/api/admin/images/upload',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(result) {
+                    if (result.code === 200) {
+                        showToast('success', '镜像上传成功');
+                        closeModal('uploadModal');
+                        setTimeout(() => loadImages(), 800);
+                    } else {
+                        showToast('error', result.msg || '上传失败');
+                    }
+                },
+                error: function(xhr) {
+                    showToast('error', (xhr.responseJSON && xhr.responseJSON.msg) || '上传失败');
+                }
+            });
+        }
+
+        function openAliasModal(fingerprint) {
+            currentFingerprint = fingerprint;
+            $('#aliasFingerprint').text(fingerprint);
+            $('#newAlias').val('');
+            openModal('aliasModal');
+        }
+
+        function saveAlias() {
+            const alias = $('#newAlias').val().trim();
+            if (!alias) {
+                showToast('error', '请填写别名');
+                return;
+            }
+
+            $.ajax({
+                url: '/api/admin/images/aliases',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ alias: alias, fingerprint: currentFingerprint }),
+                success: function(result) {
+                    if (result.code === 200) {
+                        showToast('success', '别名创建成功');
+                        closeModal('aliasModal');
+                        loadImages();
+                    } else {
+                        showToast('error', result.msg || '创建失败');
+                    }
+                },
+                error: function(xhr) {
+                    showToast('error', (xhr.responseJSON && xhr.responseJSON.msg) || '创建失败');
+                }
+            });
+        }
+
+        function deleteAlias(alias) {
+            if (!confirm('确认删除镜像别名 ' + alias + ' 吗？')) return;
+
+            $.ajax({
+                url: '/api/admin/images/aliases/' + encodeURIComponent(alias),
+                type: 'DELETE',
+                success: function(result) {
+                    if (result.code === 200) {
+                        showToast('success', '别名删除成功');
+                        loadImages();
+                    } else {
+                        showToast('error', result.msg || '删除失败');
+                    }
+                },
+                error: function(xhr) {
+                    showToast('error', (xhr.responseJSON && xhr.responseJSON.msg) || '删除失败');
+                }
+            });
+        }
+
+        function deleteImage(fingerprint) {
+            if (!confirm('确认删除该镜像吗？删除后不可恢复。')) return;
+
+            $.ajax({
+                url: '/api/admin/images/' + encodeURIComponent(fingerprint),
+                type: 'DELETE',
+                success: function(result) {
+                    if (result.code === 200) {
+                        showToast('success', '镜像删除成功');
+                        loadImages();
+                    } else {
+                        showToast('error', result.msg || '删除失败');
+                    }
+                },
+                error: function(xhr) {
+                    showToast('error', (xhr.responseJSON && xhr.responseJSON.msg) || '删除失败');
+                }
+            });
+        }
+
+        function batchDelete() {
+            const fingerprints = $('.image-checkbox:checked').map(function() { return $(this).data('fingerprint'); }).get();
+            if (fingerprints.length === 0) return;
+            if (!confirm('确认删除选中的 ' + fingerprints.length + ' 个镜像吗？')) return;
+
+            let completed = 0;
+            let failed = 0;
+            let total = fingerprints.length;
+
+            fingerprints.forEach(function(fp) {
+                $.ajax({
+                    url: '/api/admin/images/' + encodeURIComponent(fp),
+                    type: 'DELETE',
+                    success: function(result) {
+                        completed++;
+                        if (result.code !== 200) failed++;
+                        finishBatchDelete(completed, failed, total);
+                    },
+                    error: function() {
+                        completed++;
+                        failed++;
+                        finishBatchDelete(completed, failed, total);
+                    }
+                });
+            });
+        }
+
+        function finishBatchDelete(completed, failed, total) {
+            if (completed < total) return;
+            showToast(failed === 0 ? 'success' : 'error', `批量删除完成：成功 ${total - failed} 个，失败 ${failed} 个`);
+            $('#batchBar').hide();
+            loadImages();
+        }
+
+        function syncImages() {
+            showToast('info', '正在同步镜像...');
+
+            $.ajax({
+                url: '/api/admin/images/sync',
+                type: 'POST',
+                success: function(result) {
+                    if (result.code === 200) {
+                        const data = result.data || {};
+                        showToast('success', `同步完成：新增 ${data.added || 0} 个，更新 ${data.updated || 0} 个，删除 ${data.deleted || 0} 个`);
+                        setTimeout(() => loadImages(), 500);
+                    } else {
+                        showToast('error', result.msg || '同步失败');
+                    }
+                },
+                error: function() {
+                    showToast('error', '同步失败');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

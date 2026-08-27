@@ -36,8 +36,14 @@
                 </h1>
                 <p class="text-sm lg:text-base text-gray-600 mt-1">管理LXD存储池，设置创建容器时的优先级</p>
             </div>
-            <div class="flex gap-2">
-                <button onclick="syncPools()" class="px-3 py-2 text-xs lg:text-sm font-medium text-gray-700 content-box hover:bg-gray-50 border border-gray-200 rounded-lg transition flex items-center gap-2">
+			<div class="flex gap-2">
+				<button onclick="openCreateModal()" class="px-3 py-2 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 border border-blue-600 rounded-lg transition flex items-center gap-2">
+					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+					</svg>
+					创建存储池
+				</button>
+				<button onclick="syncPools()" class="px-3 py-2 text-xs lg:text-sm font-medium text-gray-700 content-box hover:bg-gray-50 border border-gray-200 rounded-lg transition flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
@@ -81,7 +87,51 @@
         </div>
     </div>
     
-    {{template "admin/admin_footer.html" .}}
+	{{template "admin/admin_footer.html" .}}
+	<div id="createPoolModal" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background-color: rgba(0,0,0,0.5);">
+		<div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
+			<div class="flex items-center justify-between p-4 border-b">
+				<h3 class="text-lg font-semibold text-gray-800">创建存储池</h3>
+				<button onclick="closeCreateModal()" class="text-gray-400 hover:text-gray-600">
+					<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+					</svg>
+				</button>
+			</div>
+			<div class="p-4 space-y-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-2">名称</label>
+					<input type="text" id="poolName" class="input input-bordered w-full" placeholder="例如: data-pool">
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-2">驱动</label>
+					<select id="poolDriver" class="select select-bordered w-full">
+						<option value="dir">dir</option>
+						<option value="btrfs">btrfs</option>
+						<option value="zfs">zfs</option>
+						<option value="lvm">lvm</option>
+						<option value="ceph">ceph</option>
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-2">数据源设备/路径</label>
+					<input type="text" id="poolSource" class="input input-bordered w-full" placeholder="可选，例如 /dev/sdb 或 /opt/lxd/data">
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-2">容量</label>
+					<input type="text" id="poolSize" class="input input-bordered w-full" placeholder="可选，例如 100GB">
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-2">额外配置 (每行 key=value)</label>
+					<textarea id="poolConfig" rows="4" class="textarea textarea-bordered w-full font-mono text-xs" placeholder="例如:&#10;lvm.thinpool_name=lxd-thinpool&#10;zfs.pool_name=lxd-zfs"></textarea>
+				</div>
+			</div>
+			<div class="flex justify-end gap-2 p-4 border-t bg-gray-50 rounded-b-lg">
+				<button onclick="closeCreateModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 border border-gray-300 rounded-lg">取消</button>
+				<button onclick="createPool()" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">创建</button>
+			</div>
+		</div>
+	</div>
 
     <script>
         let poolsData = [];
@@ -163,8 +213,9 @@
                         </td>
                         <td>${priorityBadge}</td>
                         <td>
-                            <button onclick="showPriorityModal('${p.name}', ${p.priority})" class="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition">设置优先级</button>
-                        </td>
+							<button onclick="showPriorityModal('${p.name}', ${p.priority})" class="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition">设置优先级</button>
+							<button onclick="deletePool('${p.name}')" class="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition">删除</button>
+						</td>
                     </tr>
                 `;
             });
@@ -208,28 +259,103 @@
             currentPoolName = '';
         }
 
-        function savePriority() {
-            const priority = parseInt($('#priorityInput').val()) || 0;
-            
-            $.ajax({
-                url: `/api/admin/storage-pools/${encodeURIComponent(currentPoolName)}/priority`,
-                type: 'PUT',
-                contentType: 'application/json',
-                data: JSON.stringify({ priority: priority }),
-                success: function(result) {
-                    if (result.code === 200) {
-                        showToast('success', '优先级设置成功');
-                        closePriorityModal();
-                        loadPools();
-                    } else {
-                        showToast('error', result.msg || '设置失败');
-                    }
-                },
-                error: function() {
-                    showToast('error', '设置失败');
-                }
-            });
-        }
+		function savePriority() {
+			const priority = parseInt($('#priorityInput').val()) || 0;
+
+			$.ajax({
+				url: `/api/admin/storage-pools/${encodeURIComponent(currentPoolName)}/priority`,
+				type: 'PUT',
+				contentType: 'application/json',
+				data: JSON.stringify({ priority: priority }),
+				success: function(result) {
+					if (result.code === 200) {
+						showToast('success', '优先级设置成功');
+						closePriorityModal();
+						loadPools();
+					} else {
+						showToast('error', result.msg || '设置失败');
+					}
+				},
+				error: function() {
+					showToast('error', '设置失败');
+				}
+			});
+		}
+
+		function openCreateModal() {
+			$('#createPoolModal').removeClass('hidden');
+		}
+
+		function closeCreateModal() {
+			$('#createPoolModal').addClass('hidden');
+		}
+
+		function createPool() {
+			const name = $('#poolName').val().trim();
+			const driver = $('#poolDriver').val();
+			const source = $('#poolSource').val().trim();
+			const size = $('#poolSize').val().trim();
+			const config = {};
+
+			if (!name || !driver) {
+				showToast('error', '请填写存储池名称和驱动');
+				return;
+			}
+
+			$('#poolConfig').val().split('\n').forEach(line => {
+				line = line.trim();
+				if (!line) return;
+				const eq = line.indexOf('=');
+				if (eq > 0) config[line.substring(0, eq).trim()] = line.substring(eq + 1).trim();
+			});
+
+			showToast('info', '正在创建存储池...');
+
+			$.ajax({
+				url: '/api/admin/storage-pools',
+				type: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({ name: name, driver: driver, source: source, size: size, config: config }),
+				success: function(result) {
+					if (result.code === 200) {
+						showToast('success', '存储池创建成功');
+						closeCreateModal();
+						$('#poolName').val('');
+						$('#poolSource').val('');
+						$('#poolSize').val('');
+						$('#poolConfig').val('');
+						setTimeout(() => loadPools(), 500);
+					} else {
+						showToast('error', result.msg || '创建失败');
+					}
+				},
+				error: function(xhr) {
+					showToast('error', (xhr.responseJSON && xhr.responseJSON.msg) || '创建失败');
+				}
+			});
+		}
+
+		function deletePool(name) {
+			if (!confirm(`确认删除存储池 ${name} 吗？删除前请确保没有任何容器正在使用。`)) return;
+
+			showToast('info', '正在删除存储池...');
+
+			$.ajax({
+				url: `/api/admin/storage-pools/${encodeURIComponent(name)}`,
+				type: 'DELETE',
+				success: function(result) {
+					if (result.code === 200) {
+						showToast('success', '存储池删除成功');
+						setTimeout(() => loadPools(), 500);
+					} else {
+						showToast('error', result.msg || '删除失败');
+					}
+				},
+				error: function(xhr) {
+					showToast('error', (xhr.responseJSON && xhr.responseJSON.msg) || '删除失败');
+				}
+			});
+		}
     </script>
 </body>
 </html>

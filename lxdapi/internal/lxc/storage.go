@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"lxdapi/pkg/logger"
+	"regexp"
+	"sort"
 )
 
 type StoragePoolInfo struct {
@@ -52,4 +54,55 @@ func (c *Client) GetStoragePoolResources(ctx context.Context, name string) (*Sto
 	}
 
 	return &resources, nil
+}
+
+var validStorageName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+
+func (c *Client) CreateStoragePool(ctx context.Context, name, driver, source, size string, config map[string]string) error {
+	if !validStorageName.MatchString(name) {
+		return fmt.Errorf("存储池名称不合法")
+	}
+	if !validStorageName.MatchString(driver) {
+		return fmt.Errorf("存储池驱动不合法")
+	}
+
+	args := []string{"storage", "create", name, driver}
+	if source != "" {
+		args = append(args, "source="+source)
+	}
+	if size != "" {
+		args = append(args, "size="+size)
+	}
+
+	keys := make([]string, 0, len(config))
+	for key := range config {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		if !validStorageName.MatchString(key) {
+			return fmt.Errorf("存储池配置项不合法: %s", key)
+		}
+		args = append(args, key+"="+config[key])
+	}
+
+	logger.Info("创建存储池: %s (%s)", name, driver)
+	if _, err := c.exec(ctx, args...); err != nil {
+		return fmt.Errorf("创建存储池失败: %v", err)
+	}
+	logger.OK("存储池创建成功: %s", name)
+	return nil
+}
+
+func (c *Client) DeleteStoragePool(ctx context.Context, name string) error {
+	if !validStorageName.MatchString(name) {
+		return fmt.Errorf("存储池名称不合法")
+	}
+
+	logger.Info("删除存储池: %s", name)
+	if _, err := c.exec(ctx, "storage", "delete", name); err != nil {
+		return fmt.Errorf("删除存储池失败: %v", err)
+	}
+	logger.OK("存储池删除成功: %s", name)
+	return nil
 }

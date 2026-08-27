@@ -22,16 +22,16 @@ func GetStoragePools(c *gin.Context) {
 	}
 
 	type poolResponse struct {
-		ID          uint   `json:"id"`
-		Name        string `json:"name"`
-		Driver      string `json:"driver"`
-		Description string `json:"description"`
-		Status      string `json:"status"`
-		UsedBy      int    `json:"used_by"`
-		TotalSpace  string `json:"total_space"`
-		UsedSpace   string `json:"used_space"`
+		ID           uint    `json:"id"`
+		Name         string  `json:"name"`
+		Driver       string  `json:"driver"`
+		Description  string  `json:"description"`
+		Status       string  `json:"status"`
+		UsedBy       int     `json:"used_by"`
+		TotalSpace   string  `json:"total_space"`
+		UsedSpace    string  `json:"used_space"`
 		UsagePercent float64 `json:"usage_percent"`
-		Priority    int    `json:"priority"`
+		Priority     int     `json:"priority"`
 	}
 
 	result := make([]poolResponse, len(pools))
@@ -41,16 +41,16 @@ func GetStoragePools(c *gin.Context) {
 			usagePercent = float64(p.UsedSpace) / float64(p.TotalSpace) * 100
 		}
 		result[i] = poolResponse{
-			ID:          p.ID,
-			Name:        p.Name,
-			Driver:      p.Driver,
-			Description: p.Description,
-			Status:      p.Status,
-			UsedBy:      p.UsedBy,
-			TotalSpace:  formatBytes(p.TotalSpace),
-			UsedSpace:   formatBytes(p.UsedSpace),
+			ID:           p.ID,
+			Name:         p.Name,
+			Driver:       p.Driver,
+			Description:  p.Description,
+			Status:       p.Status,
+			UsedBy:       p.UsedBy,
+			TotalSpace:   formatBytes(p.TotalSpace),
+			UsedSpace:    formatBytes(p.UsedSpace),
 			UsagePercent: usagePercent,
-			Priority:    p.Priority,
+			Priority:     p.Priority,
 		}
 	}
 
@@ -105,6 +105,60 @@ func SetStoragePoolPriority(c *gin.Context) {
 
 	logger.OK("存储池优先级设置: %s -> %d", name, req.Priority)
 	response.Success(c, "设置成功")
+}
+
+// CreateStoragePool 创建存储池
+// @Summary 创建存储池
+// @Tags Admin API - 存储池管理
+// @Param request body object{name=string,driver=string,source=string,size=string,config=map[string]string} true "存储池参数"
+// @Success 200 {object} response.Response
+// @Router /api/admin/storage-pools [post]
+func CreateStoragePool(c *gin.Context) {
+	var req struct {
+		Name   string            `json:"name" binding:"required"`
+		Driver string            `json:"driver" binding:"required"`
+		Source string            `json:"source"`
+		Size   string            `json:"size"`
+		Config map[string]string `json:"config"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, 400, "参数错误: 名称和驱动不能为空")
+		return
+	}
+
+	svc := service.NewStorageService()
+	if err := svc.Create(c.Request.Context(), req.Name, req.Driver, req.Source, req.Size, req.Config); err != nil {
+		logger.Error("创建存储池失败: %v", err)
+		response.Error(c, 500, "创建失败: "+err.Error())
+		return
+	}
+
+	logger.OK("存储池创建完成: %s", req.Name)
+	response.Success(c, "存储池创建成功")
+}
+
+// DeleteStoragePool 删除存储池
+// @Summary 删除存储池
+// @Tags Admin API - 存储池管理
+// @Param name path string true "存储池名称"
+// @Success 200 {object} response.Response
+// @Router /api/admin/storage-pools/:name [delete]
+func DeleteStoragePool(c *gin.Context) {
+	name := c.Param("name")
+	if name == "" {
+		response.Error(c, 400, "缺少存储池名称")
+		return
+	}
+
+	svc := service.NewStorageService()
+	if err := svc.Delete(c.Request.Context(), name); err != nil {
+		logger.Error("删除存储池失败: %v", err)
+		response.Error(c, 500, "删除失败: "+err.Error())
+		return
+	}
+
+	logger.OK("存储池删除完成: %s", name)
+	response.Success(c, "存储池删除成功")
 }
 
 func formatBytes(bytes int64) string {

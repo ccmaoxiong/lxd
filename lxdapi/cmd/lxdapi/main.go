@@ -8,13 +8,13 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"html/template"
-	"io/fs"
-	"net/http"
-	"lxdapi/handlers"
-	_ "lxdapi/docs"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"html/template"
+	"io/fs"
+	"log"
+	_ "lxdapi/docs"
+	"lxdapi/handlers"
 	"lxdapi/internal/api/admin"
 	"lxdapi/internal/api/console"
 	"lxdapi/internal/api/container"
@@ -38,7 +38,7 @@ import (
 	tlsManager "lxdapi/pkg/tls"
 	"lxdapi/plugins/nginx"
 	"lxdapi/plugins/opengfw"
-	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -63,7 +63,7 @@ func main() {
 	logger.OK("数据库连接成功")
 
 	logger.Info("正在初始化网络组件...")
-	
+
 	if err := ipv4.InitManager(); err != nil {
 		logger.Error("IPv4管理器初始化失败: %v", err)
 	}
@@ -71,16 +71,14 @@ func main() {
 	if err := ipv6.InitManager(); err != nil {
 		logger.Error("IPv6管理器初始化失败: %v", err)
 	}
-	
+
 	var portMappingV4Count int64
 	db.DB.Model(&models.PortMappingV4{}).Count(&portMappingV4Count)
 	logger.OK("IPv4端口映射: %d条规则", portMappingV4Count)
-	
+
 	var portMappingV6Count int64
 	db.DB.Model(&models.PortMappingV6{}).Count(&portMappingV6Count)
 	logger.OK("IPv6端口映射: %d条规则", portMappingV6Count)
-	
-
 
 	if err := traffic.InitMonitor(); err != nil {
 		logger.Error("流量监控器初始化失败: %v", err)
@@ -90,7 +88,7 @@ func main() {
 
 	pluginManager := plugin.InitManager()
 	logger.OK("插件管理器初始化成功")
-	
+
 	opengfwPlugin := opengfw.NewOpenGFWPlugin()
 	if err := pluginManager.Register(opengfwPlugin); err != nil {
 		logger.Error("注册 OpenGFW 插件失败: %v", err)
@@ -109,7 +107,6 @@ func main() {
 		logger.Info("Nginx 插件已禁用，跳过注册")
 	}
 
-		
 	if err := pluginManager.StartAll(); err != nil {
 		logger.Error("插件启动失败: %v", err)
 	} else {
@@ -135,7 +132,7 @@ func main() {
 				return fmt.Errorf("解析创建参数失败: %v", err)
 			}
 		}
-		
+
 		getString := func(key string) string {
 			if v, ok := params[key]; ok {
 				if s, ok := v.(string); ok {
@@ -160,7 +157,7 @@ func main() {
 			}
 			return false
 		}
-		
+
 		req := &models.CreateContainerRequest{
 			Name:              getString("name"),
 			Image:             getString("image"),
@@ -185,7 +182,7 @@ func main() {
 			IOWrite:           getInt("io_write"),
 			ProcessesLimit:    getInt("processes_limit"),
 		}
-		
+
 		return containerService.Create(ctx, req)
 	})
 	executor.RegisterTaskExecutor("start", func(ctx context.Context, name string, paramsJSON string) error {
@@ -251,7 +248,7 @@ func main() {
 	r.Use(middleware.BrandMiddleware())
 
 	tmpl := template.New("").Funcs(template.FuncMap{})
-	
+
 	templatesFS, err := fs.Sub(embeddedFiles, "templates")
 	if err != nil {
 		logger.Error("加载嵌入式模板失败: %v", err)
@@ -261,7 +258,7 @@ func main() {
 			"templates/user/*.html",
 			"templates/container/*.html",
 		}
-		
+
 		for _, pattern := range patterns {
 			files, err := filepath.Glob(pattern)
 			if err != nil {
@@ -286,13 +283,13 @@ func main() {
 			if err != nil || d.IsDir() || filepath.Ext(path) != ".html" {
 				return nil
 			}
-			
+
 			content, err := fs.ReadFile(templatesFS, path)
 			if err != nil {
 				logger.Error("读取嵌入式模板失败 %s: %v", path, err)
 				return nil
 			}
-			
+
 			name := filepath.ToSlash(path)
 			_, err = tmpl.New(name).Parse(string(content))
 			if err != nil {
@@ -301,10 +298,10 @@ func main() {
 			return nil
 		})
 	}
-	
+
 	r.SetHTMLTemplate(tmpl)
 	logger.OK("模板加载完成")
-	
+
 	r.NoRoute(func(c *gin.Context) {
 		c.Redirect(302, "/")
 	})
@@ -327,7 +324,7 @@ func main() {
 			"kernel":       sysInfo.Kernel,
 		})
 	})
-	
+
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	staticFS, err := fs.Sub(embeddedFiles, "static")
@@ -339,11 +336,11 @@ func main() {
 	r.GET("/ws/console", console.HandleWebSocket)
 	r.GET("/container/dashboard/lite", handlers.ContainerDashboardLite)
 	r.GET("/container/dashboard/base", handlers.ContainerDashboardBase)
-	
+
 	r.GET("/admin/login", handlers.AdminLogin)
 	r.GET("/api/admin/captcha", admin.GetCaptcha)
 	r.POST("/api/admin/login", admin.Login)
-	
+
 	adminPages := r.Group("/admin")
 	adminPages.Use(middleware.AdminPageAuth())
 	{
@@ -358,21 +355,22 @@ func main() {
 		adminPages.GET("/port-mapping/v4", handlers.AdminPortMappingV4)
 		adminPages.GET("/port-mapping/v6", handlers.AdminPortMappingV6)
 		adminPages.GET("/templates", handlers.AdminTemplates)
+		adminPages.GET("/images", handlers.AdminImages)
 		adminPages.GET("/brand-settings", handlers.AdminBrandSettings)
 		adminPages.GET("/firewall", handlers.AdminFirewall)
 		adminPages.GET("/nginx", handlers.AdminNginx)
 		adminPages.GET("/storage-pools", handlers.AdminStoragePools)
 	}
-	
+
 	r.POST("/api/admin/logout", admin.Logout)
 	r.GET("/admin/logout", handlers.AdminLogout)
-	
+
 	r.GET("/api/user/captcha", user.GetCaptcha)
 	r.POST("/api/user/login", user.Login)
 	r.POST("/api/user/logout", user.Logout)
 
 	r.GET("/user/login", handlers.UserLogin)
-	
+
 	userPages := r.Group("/user")
 	userPages.Use(middleware.UserPageAuth())
 	{
@@ -479,8 +477,17 @@ func main() {
 		adminAPI.PUT("/ip-pool/settings", admin.UpdateIPPoolSettings)
 		adminAPI.POST("/console/create-token", console.CreateToken)
 		adminAPI.GET("/storage-pools", admin.GetStoragePools)
+		adminAPI.POST("/storage-pools", admin.CreateStoragePool)
+		adminAPI.DELETE("/storage-pools/:name", admin.DeleteStoragePool)
 		adminAPI.POST("/storage-pools/sync", admin.SyncStoragePools)
 		adminAPI.PUT("/storage-pools/:name/priority", admin.SetStoragePoolPriority)
+		adminAPI.GET("/images", admin.GetImages)
+		adminAPI.POST("/images/sync", admin.SyncImages)
+		adminAPI.POST("/images/import", admin.ImportImage)
+		adminAPI.POST("/images/upload", admin.UploadImage)
+		adminAPI.POST("/images/aliases", admin.CreateImageAlias)
+		adminAPI.DELETE("/images/aliases/:alias", admin.DeleteImageAlias)
+		adminAPI.DELETE("/images/:fingerprint", admin.DeleteImage)
 		adminAPI.GET("/network/nat", admin.GetNetworkNATStatus)
 		adminAPI.POST("/network/nat", admin.SetNetworkNATStatus)
 	}
@@ -515,10 +522,10 @@ func main() {
 
 	r.GET("/api/public/brand-settings", public.GetBrandSettings)
 	r.GET("/api/public/ip-pool-settings", admin.GetIPPoolSettingsPublic)
-	
+
 	r.GET("/api/container/captcha", container.GetCaptcha)
 	r.POST("/api/container/verify", container.VerifyAccess)
-	
+
 	containerAPI := r.Group("/api/container")
 	containerAPI.Use(middleware.ContainerAuth())
 	{
@@ -537,7 +544,7 @@ func main() {
 	}
 
 	addr := fmt.Sprintf("%s:%d", cfg.System.Server.Host, cfg.System.Server.Port)
-	
+
 	if cfg.System.Server.TLS.Enabled {
 		startWithTLS(r, addr, cfg)
 	} else {
@@ -551,14 +558,14 @@ func main() {
 func startWithTLS(r *gin.Engine, addr string, cfg *core.Config) {
 	tlsCfg := cfg.System.Server.TLS
 	certMgr := tlsManager.NewCertificateManager(tlsCfg.CertFile, tlsCfg.KeyFile)
-	
+
 	certFile := tlsCfg.CertFile
 	keyFile := tlsCfg.KeyFile
 	certSource := ""
 
 	brandService := service.NewBrandService()
 	certContent, keyContent, err := brandService.LoadTLSCertificates()
-	
+
 	if err == nil && certContent != "" && keyContent != "" {
 		logger.Info("检测到Web后台配置的证书，优先使用...")
 		if err := brandService.SaveTLSCertificates(certContent, keyContent); err != nil {
@@ -568,21 +575,21 @@ func startWithTLS(r *gin.Engine, addr string, cfg *core.Config) {
 			logger.OK("已加载自定义证书")
 		}
 	}
-	
+
 	if certSource == "" && tlsCfg.AutoGenerate {
 		generateSelfSignedCert(certMgr)
 		certSource = "自签名"
 	}
-	
+
 	if certSource == "" {
 		log.Fatalf("无可用证书，无法启动HTTPS服务")
 	}
-	
+
 	logger.Info("证书来源: %s", certSource)
 	logger.Info("服务启动 (HTTPS)，监听: %s", addr)
 	logger.Info("TLS证书: %s", certFile)
 	logger.Info("TLS私钥: %s", keyFile)
-	
+
 	if err := r.RunTLS(addr, certFile, keyFile); err != nil {
 		logger.Error("HTTPS服务器启动失败: %v", err)
 	}
@@ -600,12 +607,12 @@ func generateSelfSignedCert(certMgr *tlsManager.CertificateManager) {
 			ServerDomains: []string{"localhost"},
 			ValidityDays:  3650,
 		}
-		
+
 		if err := certMgr.GenerateSelfSignedCert(opts); err != nil {
 			logger.Error("生成自签名证书失败: %v", err)
 			log.Fatalf("生成自签名证书失败: %v", err)
 		}
-		
+
 		logger.OK("自签名证书生成成功 (有效期10年)")
 	} else if !certMgr.ValidateCertificate() {
 		logger.Warn("现有证书无效或已过期，重新生成...")
@@ -618,15 +625,14 @@ func generateSelfSignedCert(certMgr *tlsManager.CertificateManager) {
 			ServerDomains: []string{"localhost"},
 			ValidityDays:  3650,
 		}
-		
+
 		if err := certMgr.GenerateSelfSignedCert(opts); err != nil {
 			logger.Error("重新生成证书失败: %v", err)
 			log.Fatalf("重新生成证书失败: %v", err)
 		}
-		
+
 		logger.OK("证书重新生成成功 (有效期10年)")
 	} else {
 		logger.OK("使用现有证书")
 	}
 }
-

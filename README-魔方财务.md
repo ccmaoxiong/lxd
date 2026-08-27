@@ -57,6 +57,8 @@ SKIP_LXD=1 sudo bash Shell/lxdapi_onekey_install.sh
 
 安装完成后，API Hash、管理员账号和密码会保存在 `/root/lxdapi-backend-install.info`。
 
+登录管理后台后，可以在“资源管理”中创建、删除存储池并设置创建容器的优先级；也可以进入“镜像管理”，从远程镜像源导入、上传镜像文件、添加默认别名或删除镜像。
+
 如果 LXD 安装时出现 `context canceled`，通常是 snapd 刷新任务中断或网络超时。手动恢复：
 
 ```bash
