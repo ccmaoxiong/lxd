@@ -15,10 +15,10 @@ warn() { log "${YELLOW}[WARN]${NC} $1"; }
 err() { log "${RED}[ERR]${NC} $1"; exit 1; }
 
 GITHUB_OWNER="${GITHUB_OWNER:-ccmaoxiong}"
-GITHUB_REPO="${GITHUB_REPO:-lxc}"
+GITHUB_REPO="${GITHUB_REPO:-lxd}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 GITEE_OWNER="${GITEE_OWNER:-ccmaoxiong}"
-GITEE_REPO="${GITEE_REPO:-lxc}"
+GITEE_REPO="${GITEE_REPO:-lxd}"
 
 if [ "$(id -u)" -ne 0 ]; then
     err "请使用 root 运行，或使用 sudo bash $0"

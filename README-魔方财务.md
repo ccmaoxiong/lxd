@@ -11,7 +11,7 @@
 
 ```bash
 apt update && apt install sudo wget curl nftables -y
-bash <(curl -Ls https://raw.githubusercontent.com/ccmaoxiong/lxc/main/Shell/lxd_install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/ccmaoxiong/lxd/main/Shell/lxd_install.sh)
 ```
 
 LXD 初始化后，建议按实际磁盘情况创建 ZFS 或 Btrfs 存储池，并导入 Debian、Ubuntu、Alpine 等镜像。仓库内 `Shell/` 提供对应脚本。
@@ -90,25 +90,25 @@ sudo bash Shell/lxdapi_onekey_install.sh
 GitHub：
 
 ```bash
-bash <(curl -Ls https://raw.githubusercontent.com/ccmaoxiong/lxc/main/Shell/lxdapi_cloud_install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/ccmaoxiong/lxd/main/Shell/lxdapi_cloud_install.sh)
 ```
 
 Gitee：
 
 ```bash
-RELEASE_SOURCE=gitee bash <(curl -Ls https://gitee.com/ccmaoxiong/lxc/raw/main/Shell/lxdapi_cloud_install.sh)
+RELEASE_SOURCE=gitee bash <(curl -Ls https://gitee.com/ccmaoxiong/lxd/raw/main/Shell/lxdapi_cloud_install.sh)
 ```
 
 指定 Release 版本：
 
 ```bash
-LXDAPI_TAG=v1.0.0 bash <(curl -Ls https://raw.githubusercontent.com/ccmaoxiong/lxc/main/Shell/lxdapi_cloud_install.sh)
+LXDAPI_TAG=v1.0.0 bash <(curl -Ls https://raw.githubusercontent.com/ccmaoxiong/lxd/main/Shell/lxdapi_cloud_install.sh)
 ```
 
 指定安装包直链：
 
 ```bash
-LXDAPI_RELEASE_URL=https://example.com/lxdapi-linux-amd64.tar.gz bash <(curl -Ls https://raw.githubusercontent.com/ccmaoxiong/lxc/main/Shell/lxdapi_cloud_install.sh)
+LXDAPI_RELEASE_URL=https://example.com/lxdapi-linux-amd64.tar.gz bash <(curl -Ls https://raw.githubusercontent.com/ccmaoxiong/lxd/main/Shell/lxdapi_cloud_install.sh)
 ```
 
 云端脚本默认使用 `AUTO_INSTALL=1`，会自动生成 API Hash 和管理员密码，并保存到 `/root/lxdapi-backend-install.info`。端口、账号、代理等参数仍可通过环境变量覆盖。
